@@ -40,7 +40,6 @@ class QLearningAgent(ReinforcementAgent):
         ReinforcementAgent.__init__(self, **args)
         "*** YOUR CODE HERE ***"
         self.q_values = util.Counter()  # we will store (state, action) pairs as opposed to states.
-        self.history = set()
 
     def getQValue(self, state, action):
         """
@@ -62,15 +61,13 @@ class QLearningAgent(ReinforcementAgent):
         "*** YOUR CODE HERE ***"
 
         max_val = 0.0
-        max_action = None
+        if len(self.getLegalActions(state)) == 0:
+            return max_val
+
         for action in self.getLegalActions(state):
             current_val = self.getQValue(state, action)
             if max_val < current_val:
                 max_val = current_val
-                max_action = action
-
-            elif max_val == current_val:
-                max_action = random.choice((action, max_action))
 
         return max_val
 
@@ -81,23 +78,31 @@ class QLearningAgent(ReinforcementAgent):
       you should return None.
     """
         "*** YOUR CODE HERE ***"
-        # util.raiseNotDefined()
         max_val = -math.inf
-        max_action = None
+        max_actions = []
 
-        previous_actions = [action for action in self.getLegalActions(state) if (state, action) in self.q_values]
-        new_actions = [action for action in self.getLegalActions(state) if (state, action) not in self.q_values]
+        if len(self.getLegalActions(state)) == 0:
+            return None
+
+        previous_action_values = [self.getQValue(state, action) < 0 for action in self.getLegalActions(state)]
+        previous_actions = [action for action in self.getLegalActions(state) if self.getQValue(state, action) < 0]
+        new_actions = [action for action in self.getLegalActions(state) if action not in previous_actions]
+
+        if all(previous_action_values) and new_actions != []:
+            return random.choice(new_actions)
 
         # try to find the max in the previous actions
         for action in self.getLegalActions(state):
             current_val = self.getQValue(state, action)
             if max_val < current_val:
                 max_val = current_val
-                max_action = action
-            elif max_val == current_val:
-                max_action = random.choice((action, max_action))
 
-        return max_action
+        for action in self.getLegalActions(state):
+            if self.getQValue(state, action) == max_val:
+                max_actions.append(action)
+
+        return random.choice(max_actions)
+
 
     def getAction(self, state):
         """
@@ -136,8 +141,7 @@ class QLearningAgent(ReinforcementAgent):
     """
         "*** YOUR CODE HERE ***"
         update_value = reward + self.discount*self.getValue(nextState) - self.q_values[(state, action)]
-        update_value = self.q_values[(state, action)] + self.alpha*update_value
-        self.q_values[(state, action)] = update_value
+        self.q_values[(state, action)] += self.alpha*update_value
 
 
 class PacmanQAgent(QLearningAgent):
@@ -196,8 +200,8 @@ class ApproximateQAgent(PacmanQAgent):
       where * is the dotProduct operator
     """
         "*** YOUR CODE HERE ***"
-
-        return self.weights*self.featExtractor.getFeatures(state, action)
+        feature_vector = self.featExtractor.getFeatures(state, action)
+        return self.weights*feature_vector
 
     def update(self, state, action, nextState, reward):
         """
@@ -208,13 +212,9 @@ class ApproximateQAgent(PacmanQAgent):
         feature_vector = self.featExtractor.getFeatures(state, action)
         correction = reward + self.discount*self.getValue(nextState) - self.getQValue(state, action)
 
-        # vector multiplication
+        # update the weights vector
         for feature in feature_vector:
             self.weights[feature] += self.alpha*correction*feature_vector[feature]
-
-
-
-
 
     def final(self, state):
         "Called at the end of each game."

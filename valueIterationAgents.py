@@ -7,7 +7,6 @@
 # For more info, see http://inst.eecs.berkeley.edu/~cs188/sp09/pacman.html
 
 import mdp, util
-import time
 import math
 
 from learningAgents import ValueEstimationAgent
@@ -51,7 +50,7 @@ class ValueIterationAgent(ValueEstimationAgent):
                     update[state] = max(rewards)
 
             # update to the latest values
-            self.values = update.copy()
+            self.values = update
 
     def reward(self, state, action):
         """
@@ -63,7 +62,7 @@ class ValueIterationAgent(ValueEstimationAgent):
     """
         reward = 0
         for next_state, prob in self.mdp.getTransitionStatesAndProbs(state, action):
-            reward += self.mdp.getReward(state, action, next_state) + prob * self.discount * self.values[next_state]
+            reward += prob * (self.mdp.getReward(state, action, next_state) + self.discount * self.values[next_state])
 
         return reward
 
@@ -82,17 +81,15 @@ class ValueIterationAgent(ValueEstimationAgent):
       to derive it on the fly.
       """
         "*** YOUR CODE HERE ***"
-        if action is None:
-            return self.values[state]
+        # if action is None:
+        #     return self.values[state]
 
         q_val = 0
         for next_state, prob in self.mdp.getTransitionStatesAndProbs(state, action):
-            q_val += self.mdp.getReward(state, action, next_state) + \
-                     self.discount * prob * self.values[next_state]
+            q_val += prob*(self.mdp.getReward(state, action, next_state) + \
+                     self.discount * self.values[next_state])
 
         return q_val
-
-        # return self.values[state]
 
     def getPolicy(self, state):
         """
